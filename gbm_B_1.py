@@ -206,9 +206,11 @@ dtrain = lgbm.Dataset(data = data[features],
                         feature_name = features,
                         categorical_feature = cat_features)
 
+FINAL_NUM_BOOST_ROUNDS = int(1.1 * np.mean(best_iter_list))
+
 final_model = lgbm.train(params=all_features_params,
                             train_set=dtrain,
-                            num_boost_round=40000,
+                            num_boost_round=FINAL_NUM_BOOST_ROUNDS,
                             feature_name=features,
                             categorical_feature=cat_features,
                             verbose_eval=100)
@@ -221,7 +223,21 @@ final_model = lgbm.train(params=all_features_params,
 test = pd.read_csv('test.csv')
         
 for f in cat_features:
-    for c in data[f].unique():
+    for c in test[f].unique():
         test[f] = np.where(test[f] == c, cat_dict[(f,c)], test[f])        
-                
+    test[f] = test[f].astype('int')            
+    
 test['target'] = final_model.predict(test[features])
+
+test[['id','target']].to_csv('submission.csv',index=False)
+
+
+
+#!#############################################################################
+#! BY CATEGORY
+grouped_data = data.groupby([x for x in list(data) if 'cat' in x], as_index = True)['target'].agg(['std','count'])
+grouped_data.head(20)
+pd.set_option('display.max_rows', 5000)
+grouped_data.sort_values(by='count', ascending =False).head(50)
+
+np.std(data['target'])
